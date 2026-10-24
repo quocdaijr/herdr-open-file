@@ -1,0 +1,20 @@
+id = "open-file"
+name = "Open File"
+version = "0.1.0"
+min_herdr_version = "0.9.1"
+description = "Ctrl-click a file link in a pane to open it in your editor (Zed by default)"
+platforms = ["macos", "linux"]
+
+# Pane commands resolve on PATH, not the plugin root, hence `sh -c exec`.
+[[actions]]
+id = "open"
+title = "Open file in editor"
+contexts = ["pane"]
+command = ["/bin/sh", "-c", "exec \"$HERDR_PLUGIN_ROOT/open.sh\""]
+
+# Only OSC 8 links reach a handler: osc8wrap emits herdr-open://, Claude Code file://.
+[[link_handlers]]
+id = "file-link"
+title = "Open file in editor"
+action = "open"
+pattern = "^(herdr-open|file)://"

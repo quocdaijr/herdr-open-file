@@ -1,0 +1,11 @@
+# Copy to: $(herdr plugin config-dir open-file)/config.toml
+# Placeholders: {file} (quoted for you), {line}, {col}
+
+editor_command = "zed {file}:{line}:{col}"          # default
+# editor_command = "phpstorm --line {line} {file}"
+# editor_command = "code -g {file}:{line}:{col}"
+# editor_command = "open {file}"                    # macOS default app, ignores line
+
+# Terminal editors run in a herdr split beside the clicked pane:
+# editor_command = "nvim +{line} {file}"
+# open_in_pane = true
