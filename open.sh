@@ -46,20 +46,23 @@ case $url in
 esac
 
 # file:///abs has no host; herdr-open://file/abs and file://localhost/abs do.
-case $rest in
-  /*) ;;
-  *) rest=/${rest#*/} ;;
-esac
+case $rest in /*) ;; *) rest=/${rest#*/} ;; esac
 
-# Escape backslashes before %XX -> \xXX, so printf %b cannot eat a literal
-# backslash that belongs to the filename (approach from klukacin/herdr-finder-reveal).
-p=$(printf '%s' "$rest" | sed -e 's/\\/\\\\/g' -e 's/%\([0-9A-Fa-f][0-9A-Fa-f]\)/\\x\1/g')
-p=$(printf '%b' "$p")
-
-case $p in
-  "~") p=$HOME ;;
-  "~/"*) p="$HOME/${p#\~/}" ;;
-esac
+# Percent-decode byte by byte in awk: dash's printf %b has no \xHH, and the C
+# locale keeps %c from re-encoding bytes of a UTF-8 name.
+p=$(printf '%s' "$rest" | LC_ALL=C awk '
+  function hex(h) {
+    h = tolower(h)
+    return (index("0123456789abcdef", substr(h, 1, 1)) - 1) * 16 + index("0123456789abcdef", substr(h, 2, 1)) - 1
+  }
+  {
+    s = $0
+    while (match(s, /%[0-9A-Fa-f][0-9A-Fa-f]/)) {
+      printf "%s%c", substr(s, 1, RSTART - 1), hex(substr(s, RSTART + 1, 2))
+      s = substr(s, RSTART + 3)
+    }
+    printf "%s", s
+  }')
 
 # Peel :line[:col] only when the literal path is missing, so a name with a colon still works.
 line=1 col=1
@@ -87,11 +90,12 @@ if [ "$(cfg_get open_in_pane)" != true ]; then
 fi
 
 # Terminal editor: run it in a split beside the pane that was clicked.
-pane=$(printf '%s' "${HERDR_PLUGIN_CONTEXT_JSON:-}" |
-  sed -n 's/.*"focused_pane_id"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')
+ctx=${HERDR_PLUGIN_CONTEXT_JSON:-}
+pane=$(printf '%s' "$ctx" | sed -n 's/.*"focused_pane_id"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')
 dir=$(dirname "$p")
 [ -d "$p" ] && dir=$p
-new=$(herdr pane split ${pane:+"$pane"} --direction right --cwd "$dir" --focus |
-  python3 -c 'import json, sys; print(json.load(sys.stdin)["result"]["pane"]["pane_id"])')
+# Separate statements, so set -e stops on a failed split (a pipeline would hide it).
+split=$(herdr pane split ${pane:+"$pane"} --direction right --cwd "$dir" --focus)
+new=$(printf '%s' "$split" | python3 -c 'import json, sys; print(json.load(sys.stdin)["result"]["pane"]["pane_id"])')
 herdr pane run "$new" "$cmd" >/dev/null
 say "open in pane $new: $cmd"

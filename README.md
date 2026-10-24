@@ -53,7 +53,10 @@ cp config.example.toml "$(herdr plugin config-dir open-file)/config.toml"
 ## Test
 
 ```sh
-sh test.sh
+sh test.sh       # assert-style cases; a stub `herdr` on PATH, so no live Herdr is touched
+sh coverage.sh   # line coverage of open.sh with bashcov, in Docker
 ```
+
+CI runs the tests on Linux (dash) and macOS (bash 3.2), runs shellcheck, and fails if `open.sh` line coverage drops below 99%. Every line of `open.sh` runs in the tests.
 
 The `file://` decoding is adapted from [klukacin/herdr-finder-reveal](https://github.com/klukacin/herdr-finder-reveal).

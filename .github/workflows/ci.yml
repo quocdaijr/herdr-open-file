@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    strategy:
+      matrix:
+        # dash on Linux, bash 3.2 as /bin/sh on macOS
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+      - run: sh test.sh
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - run: shellcheck open.sh test.sh coverage.sh
+
+  coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - run: FAIL_UNDER=99 sh coverage.sh | tee coverage.txt
+      - run: |
+          {
+            echo '### Coverage'
+            echo '```'
+            grep '^open.sh line coverage\|^missed lines' coverage.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
